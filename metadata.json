@@ -1,0 +1,5 @@
+{
+  "name": "Recursive Theory of Mind Simulator",
+  "description": "An interactive agent simulation demonstrating second-order Theory of Mind. Two AI agents (Alice and Bob) communicate while maintaining internal models of themselves, the other person, and what they believe the other person thinks of them.",
+  "requestFramePermissions": []
+}
