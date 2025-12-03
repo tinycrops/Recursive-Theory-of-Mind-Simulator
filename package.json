@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:scenarios": "tsx tests/runScenarios.ts",
+    "test:scenarios:list": "tsx tests/runScenarios.ts --list",
+    "test:scenario": "tsx tests/runScenarios.ts --scenario"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
@@ -17,6 +20,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "tsx": "^4.19.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

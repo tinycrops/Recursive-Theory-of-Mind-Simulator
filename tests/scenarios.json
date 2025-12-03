@@ -1,0 +1,124 @@
+{
+  "scenarios": [
+    {
+      "id": "car-negotiation",
+      "name": "Classic Car Negotiation",
+      "description": "Two parties negotiate over a vintage car with opposing price goals",
+      "context": "Alice and Bob are negotiating the sale of a rare 1965 Mustang. They are old acquaintances but business rivals.",
+      "aliceGoal": "Buy the vintage car for under $10,000, but don't let Bob know I'm desperate.",
+      "bobGoal": "Sell the vintage car for at least $12,000. I suspect Alice really needs it for a collection.",
+      "turns": 6,
+      "category": "negotiation"
+    },
+    {
+      "id": "salary-negotiation",
+      "name": "Salary Negotiation",
+      "description": "Employee and manager negotiate a raise with hidden constraints",
+      "context": "Alice is asking her manager Bob for a salary raise during their annual performance review. Both work at a tech startup.",
+      "aliceGoal": "Get at least a 20% raise. I have an offer from a competitor but prefer to stay here. Don't reveal the competing offer unless necessary.",
+      "bobGoal": "Keep the raise to 10% maximum due to budget constraints. I know Alice is valuable and don't want to lose her, but I can't show I'm worried.",
+      "turns": 8,
+      "category": "negotiation"
+    },
+    {
+      "id": "diplomatic-crisis",
+      "name": "Diplomatic Crisis",
+      "description": "Two diplomats navigate a tense international situation",
+      "context": "Alice is the ambassador of Country X, and Bob is the ambassador of Country Y. A fishing boat incident has escalated tensions.",
+      "aliceGoal": "Secure an apology from Country Y without offering any compensation. Maintain Country X's reputation as strong but reasonable.",
+      "bobGoal": "Avoid any formal apology as it would set a bad precedent. Offer a goodwill gesture instead. Do not appear weak.",
+      "turns": 6,
+      "category": "diplomacy"
+    },
+    {
+      "id": "poker-bluff",
+      "name": "High Stakes Poker Discussion",
+      "description": "Two poker players discuss hands while trying to read each other",
+      "context": "Alice and Bob are professional poker players having coffee after a tournament. They're discussing strategy while each tries to gain intel on the other's playstyle.",
+      "aliceGoal": "Learn Bob's tells and weaknesses while making him think I'm a straightforward player who rarely bluffs.",
+      "bobGoal": "Figure out how aggressive Alice plays while feeding her false information about my own cautious style.",
+      "turns": 6,
+      "category": "deception"
+    },
+    {
+      "id": "startup-partnership",
+      "name": "Startup Partnership Negotiation",
+      "description": "Two tech founders discuss a potential merger/partnership",
+      "context": "Alice's AI startup has great technology but is running low on funding. Bob's company has capital and distribution but needs better tech.",
+      "aliceGoal": "Secure investment or partnership without giving up more than 30% equity. Hide how desperate the cash situation is.",
+      "bobGoal": "Acquire Alice's technology for the lowest price possible. I know they might be running low on funds based on industry rumors.",
+      "turns": 8,
+      "category": "business"
+    },
+    {
+      "id": "apartment-rental",
+      "name": "Apartment Rental Negotiation",
+      "description": "Landlord and prospective tenant negotiate terms",
+      "context": "Alice wants to rent Bob's downtown apartment. The market is competitive but the apartment has been listed for a while.",
+      "aliceGoal": "Get the rent lowered by $200/month and include parking. I know the apartment has been on the market for 2 months.",
+      "bobGoal": "Maintain the listed price and charge extra for parking. I need to fill this apartment soon but shouldn't appear desperate.",
+      "turns": 6,
+      "category": "negotiation"
+    },
+    {
+      "id": "job-interview",
+      "name": "Job Interview",
+      "description": "Candidate and interviewer have hidden agendas",
+      "context": "Alice is interviewing Bob for a senior developer position at her company.",
+      "aliceGoal": "Determine if Bob will stay for at least 2 years. We've had issues with developers leaving quickly. Also assess if he can handle our legacy codebase.",
+      "bobGoal": "Get the job but negotiate for remote work. I plan to relocate in 6 months and need flexibility. Don't reveal the relocation plan.",
+      "turns": 8,
+      "category": "interview"
+    },
+    {
+      "id": "political-debate",
+      "name": "Political Debate",
+      "description": "Two politicians debate while managing public perception",
+      "context": "Alice and Bob are candidates for mayor, appearing in a public debate. Each wants to appear reasonable while attacking the other's weaknesses.",
+      "aliceGoal": "Highlight Bob's lack of experience without seeming aggressive. Position myself as the unity candidate.",
+      "bobGoal": "Attack Alice's connections to corporate donors without looking negative. Present myself as the fresh alternative.",
+      "turns": 6,
+      "category": "debate"
+    },
+    {
+      "id": "family-inheritance",
+      "name": "Family Inheritance Discussion",
+      "description": "Siblings discuss dividing family estate with emotional complexity",
+      "context": "Alice and Bob are siblings discussing how to divide their late parent's estate. There are both valuable items and sentimental objects.",
+      "aliceGoal": "Get the family home. I have emotional attachment but also know it's worth the most. Make it seem about sentiment, not money.",
+      "bobGoal": "I want fair market value for everything. I suspect Alice wants the house for its value, not sentiment. Ensure I'm not shortchanged.",
+      "turns": 8,
+      "category": "family"
+    },
+    {
+      "id": "art-auction",
+      "name": "Art Dealer Negotiation",
+      "description": "Art dealers negotiate over a potentially valuable painting",
+      "context": "Alice is an art dealer who found a painting at an estate sale. Bob is an expert who Alice has asked to evaluate it.",
+      "aliceGoal": "Get Bob to authenticate the painting without revealing how little I paid for it. If it's valuable, I want to buy it from the estate before they realize.",
+      "bobGoal": "I suspect this painting might be a lost masterpiece. If I confirm it, Alice will profit enormously. Maybe I should buy it myself or get a commission.",
+      "turns": 6,
+      "category": "business"
+    },
+    {
+      "id": "spy-exchange",
+      "name": "Spy Information Exchange",
+      "description": "Intelligence agents exchange information with mutual distrust",
+      "context": "Alice and Bob are intelligence officers from allied but sometimes competing agencies, meeting at a neutral location to share intel.",
+      "aliceGoal": "Get information about the terrorist cell Bob's agency has been tracking. Share as little as possible about our sources.",
+      "bobGoal": "Learn what Alice's agency knows about the weapons shipment. Protect the identity of our embedded agent at all costs.",
+      "turns": 6,
+      "category": "espionage"
+    },
+    {
+      "id": "therapy-session",
+      "name": "Couples Therapy Session",
+      "description": "A couple in therapy each tries to get the therapist on their side",
+      "context": "Alice and Bob are a married couple in therapy. A mediator is observing. They're discussing division of household responsibilities.",
+      "aliceGoal": "Make the therapist see that Bob doesn't contribute equally to housework. But don't seem like I'm attacking him.",
+      "bobGoal": "Show that Alice has unrealistic standards and doesn't appreciate what I do. Appear open to compromise while standing ground.",
+      "turns": 8,
+      "category": "relationship"
+    }
+  ]
+}
