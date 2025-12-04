@@ -1,343 +1,136 @@
 import React, { useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { 
-  Character, Message, SimulationConfig, Turn, 
-  PrimaryArchetype, NarrativeState, ProjectionEvent,
-  BeliefChallenge, ShadowTouch
-} from "./types";
-import { generateAgentTurn } from "./services/geminiService";
-import { 
-  generateDeepDialogue, 
-  createCharacterFromSeed,
-} from "./services/narrativeEngine";
-import { MindVisualizer } from "./components/MindVisualizer";
-import { PsycheVisualizer } from "./components/PsycheVisualizer";
-import { ChatInterface } from "./components/ChatInterface";
-import { NarrativeView } from "./components/NarrativeView";
-import { 
-  Play, RotateCcw, Settings, Layers, Brain, 
-  Sparkles, BookOpen, ChevronRight, Zap,
-  Moon, Sun, Eye, EyeOff
+  Brain, Sparkles, TrendingUp, Settings, RotateCcw,
+  Layers, Zap, BookOpen, ChevronRight, Link2,
+  Moon, Sun, Play, Pause, Plus, X, BarChart3
 } from "lucide-react";
 
+// Types
+import { 
+  JournalEntry, SystemConfig, SignalBridge, PredictionMarket,
+  UserPersona, ContentBrief, MarketPosition, JournalAnalysis
+} from "./types";
+
+// Services
+import { processJournalInput, createDefaultConfig, createSampleMarket } from "./services/signalBridge";
+
+// Components
+import { JournalInput } from "./components/JournalInput";
+import { ContentPreview } from "./components/ContentPreview";
+import { PredictionPanel } from "./components/PredictionPanel";
+import { BridgeVisualizer } from "./components/BridgeVisualizer";
+
 // ═══════════════════════════════════════════════════════════════════════════
-// RECURSIVE MIND NARRATIVE ENGINE
+// SIGNAL-ALPHA-CONTENT BRIDGE
 // ═══════════════════════════════════════════════════════════════════════════
-// "The psyche is not of today; its ancestry goes back millions of years.
-// Individual consciousness is only the flower and fruit of a season."
-// — Carl Jung
+// "Between stimulus and response there is a space. In that space is our power
+// to choose our response. In our response lies our growth and our freedom."
+// — Viktor Frankl
+//
+// This system bridges:
+// - Personal video journal inputs → Engaging YouTube Short content
+// - Journal insights → Prediction market alpha generation
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SCENARIO PRESETS - Archetypally Grounded Story Seeds
+// SAMPLE MARKETS FOR DEMO
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface ScenarioPreset {
-  name: string;
-  description: string;
-  context: string;
-  alice: {
-    name: string;
-    archetype: PrimaryArchetype;
-    core_wound: string;
-    secret_goal: string;
-    color: string;
-  };
-  bob: {
-    name: string;
-    archetype: PrimaryArchetype;
-    core_wound: string;
-    secret_goal: string;
-    color: string;
-  };
-  theme: string;
-  genre: string;
-}
-
-const SCENARIO_PRESETS: ScenarioPreset[] = [
+const SAMPLE_MARKETS: PredictionMarket[] = [
   {
-    name: "The Negotiation",
-    description: "A classic negotiation where hidden agendas clash",
-    context: "Alice and Bob are negotiating the sale of a rare 1965 Mustang. They are old acquaintances but business rivals.",
-    alice: {
-      name: "Alice",
-      archetype: "HERO",
-      core_wound: "Never good enough for her father's approval",
-      secret_goal: "Buy the vintage car for under $10,000, but don't let Bob know I'm desperate—it was my late father's dream car.",
-      color: "#3B82F6"
-    },
-    bob: {
-      name: "Bob",
-      archetype: "TRICKSTER",
-      core_wound: "Betrayed by a business partner, trusts no one fully",
-      secret_goal: "Sell for at least $12,000. I suspect Alice really needs it—use that leverage.",
-      color: "#8B5CF6"
-    },
-    theme: "The masks we wear in pursuit of what we desire",
-    genre: "Drama"
+    id: "market-1",
+    platform: "POLYMARKET",
+    question: "Will AI systems achieve human-level reasoning by 2027?",
+    current_price: 0.35,
+    volume: 150000,
+    liquidity: 50000,
+    resolution_date: "2027-12-31",
+    category: "AI/Technology",
   },
   {
-    name: "The Reunion",
-    description: "Former lovers meet after years apart",
-    context: "A chance meeting at a mutual friend's gallery opening. Ten years have passed since their painful breakup.",
-    alice: {
-      name: "Elena",
-      archetype: "SHAPESHIFTER",
-      core_wound: "Abandoned by her mother, terrified of being left",
-      secret_goal: "Find out if he ever truly loved me, without showing I still care.",
-      color: "#EC4899"
-    },
-    bob: {
-      name: "Marcus",
-      archetype: "SHADOW",
-      core_wound: "Told he was unlovable by his first wife",
-      secret_goal: "Apologize for how things ended, but protect myself from rejection.",
-      color: "#6366F1"
-    },
-    theme: "Can we ever return to the people we loved?",
-    genre: "Romance/Drama"
+    id: "market-2",
+    platform: "MANIFOLD",
+    question: "Will remote work remain the norm for tech workers in 2025?",
+    current_price: 0.62,
+    volume: 25000,
+    liquidity: 10000,
+    resolution_date: "2025-12-31",
+    category: "Work/Society",
   },
   {
-    name: "The Mentor's Secret",
-    description: "A student discovers their mentor's hidden past",
-    context: "Professor Chen's office, late evening. Jordan has discovered documents revealing the professor's involvement in a scandal 30 years ago.",
-    alice: {
-      name: "Jordan",
-      archetype: "HERO",
-      core_wound: "Idealized a parent who turned out to be flawed",
-      secret_goal: "Understand how someone I admire could have done this, without destroying my faith in mentorship.",
-      color: "#10B981"
-    },
-    bob: {
-      name: "Professor Chen",
-      archetype: "MENTOR",
-      core_wound: "A choice made in weakness that haunts every day since",
-      secret_goal: "Protect my legacy while finally releasing this secret. I'm tired of the weight.",
-      color: "#F59E0B"
-    },
-    theme: "How do we reconcile the flaws of those we look up to?",
-    genre: "Drama"
+    id: "market-3",
+    platform: "POLYMARKET",
+    question: "Will Bitcoin reach new ATH in 2025?",
+    current_price: 0.55,
+    volume: 500000,
+    liquidity: 200000,
+    resolution_date: "2025-12-31",
+    category: "Crypto/Finance",
   },
-  {
-    name: "The Threshold",
-    description: "A dying parent and their estranged child",
-    context: "A hospital room. They haven't spoken in five years. Time is running out.",
-    alice: {
-      name: "Sam",
-      archetype: "CHILD",
-      core_wound: "Raised with conditional love, never felt accepted for who they truly are",
-      secret_goal: "Get acknowledgment that their way of life is valid. Prove I can forgive without losing myself.",
-      color: "#F97316"
-    },
-    bob: {
-      name: "Margaret",
-      archetype: "MOTHER",
-      core_wound: "Raised to believe her worth was in raising perfect children",
-      secret_goal: "Express love without taking back the criticisms I still believe. Find peace before dying.",
-      color: "#A855F7"
-    },
-    theme: "Can we heal lifelong wounds in the time that remains?",
-    genre: "Tragedy/Drama"
-  },
-  {
-    name: "The Rival's Game",
-    description: "Two rivals forced to cooperate",
-    context: "Corporate boardroom. Both vying for CEO position, but the board has demanded they jointly present a unified strategy or both will be passed over.",
-    alice: {
-      name: "Victoria",
-      archetype: "FATHER",
-      core_wound: "Was told she had to be twice as good to be seen as equal",
-      secret_goal: "Appear collaborative while positioning myself as the obvious leader.",
-      color: "#1E40AF"
-    },
-    bob: {
-      name: "David",
-      archetype: "THRESHOLD_GUARDIAN",
-      core_wound: "Family legacy of business success he must uphold or shame his name",
-      secret_goal: "Expose her controlling nature to the board while seeming like the team player.",
-      color: "#DC2626"
-    },
-    theme: "When ambition meets cooperation, what survives?",
-    genre: "Thriller"
-  }
 ];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// INITIAL STATES
-// ─────────────────────────────────────────────────────────────────────────────
-
-const DEFAULT_PRESET = SCENARIO_PRESETS[0];
-
-const INITIAL_CONFIG: SimulationConfig = {
-  aliceGoal: DEFAULT_PRESET.alice.secret_goal,
-  bobGoal: DEFAULT_PRESET.bob.secret_goal,
-  context: DEFAULT_PRESET.context
-};
-
-const createInitialCharacter = (preset: typeof DEFAULT_PRESET.alice | typeof DEFAULT_PRESET.bob): Character => {
-  return createCharacterFromSeed({
-    name: preset.name,
-    archetype: preset.archetype,
-    core_wound: preset.core_wound,
-    secret_goal: preset.secret_goal,
-    color: preset.color
-  });
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN APP COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 
 const App: React.FC = () => {
-  // Mode and UI state
-  const [mode, setMode] = useState<'simple' | 'deep'>('deep');
-  const [showSettings, setShowSettings] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<ScenarioPreset>(DEFAULT_PRESET);
-  const [showPsychology, setShowPsychology] = useState(true);
-  const [showSubtext, setShowSubtext] = useState(true);
-
-  // Configuration
-  const [config, setConfig] = useState<SimulationConfig>(INITIAL_CONFIG);
-  
-  // Conversation state
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [turn, setTurn] = useState<Turn>('ALICE');
+  // Core state
+  const [config, setConfig] = useState<SystemConfig>(createDefaultConfig('BRIDGE_MODE'));
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Psychological events tracking
-  const [psychologicalEvents, setPsychologicalEvents] = useState<{
-    projections: ProjectionEvent[];
-    beliefs: BeliefChallenge[];
-    shadows: ShadowTouch[];
-  }>({ projections: [], beliefs: [], shadows: [] });
-
-  // Characters (deep mode uses full Character type)
-  const [alice, setAlice] = useState<Character>(() => createInitialCharacter(DEFAULT_PRESET.alice));
-  const [bob, setBob] = useState<Character>(() => createInitialCharacter(DEFAULT_PRESET.bob));
+  // Bridge state
+  const [currentBridge, setCurrentBridge] = useState<SignalBridge | null>(null);
+  const [bridgeHistory, setBridgeHistory] = useState<SignalBridge[]>([]);
+  
+  // Markets state
+  const [activeMarkets, setActiveMarkets] = useState<PredictionMarket[]>(SAMPLE_MARKETS);
+  const [showMarketManager, setShowMarketManager] = useState(false);
+  
+  // UI state
+  const [showSettings, setShowSettings] = useState(false);
+  const [viewMode, setViewMode] = useState<'split' | 'content' | 'prediction' | 'bridge'>('split');
 
   // ─────────────────────────────────────────────────────────────────────────
   // HANDLERS
   // ─────────────────────────────────────────────────────────────────────────
 
-  const handleNextTurn = async () => {
+  const handleJournalSubmit = async (entry: JournalEntry) => {
     setIsProcessing(true);
 
-    const isAliceTurn = turn === 'ALICE';
-    const currentAgent = isAliceTurn ? alice : bob;
-    const otherAgent = isAliceTurn ? bob : alice;
-    const setAgent = isAliceTurn ? setAlice : setBob;
-
     try {
-      if (mode === 'deep') {
-        // Use the deep narrative engine
-        const result = await generateDeepDialogue(
-          currentAgent,
-          otherAgent,
-          messages,
-          config.context
-        );
+      const bridge = await processJournalInput(entry, config, {
+        markets: activeMarkets,
+        previousAnalyses: bridgeHistory.flatMap(b => b.journal_analysis),
+      });
 
-        // Update character with new mind state
-        setAgent(prev => ({
-          ...prev,
-          mindState: result.mindState,
-          conscious: {
-            ...prev.conscious,
-            emotional_state: {
-              ...prev.conscious.emotional_state,
-              primary_emotion: result.psychologicalLayers.felt_vs_displayed.felt as any || prev.conscious.emotional_state.primary_emotion,
-              displayed_emotion: result.psychologicalLayers.felt_vs_displayed.displayed as any,
-            }
-          }
-        }));
-
-        // Add message with full psychological metadata
-        setMessages(prev => [...prev, result.message]);
-
-      } else {
-        // Use simple mode (original behavior)
-        const result = await generateAgentTurn(
-          {
-            name: currentAgent.name,
-            color: currentAgent.color,
-            avatar: currentAgent.avatar,
-            secretGoal: currentAgent.secretGoal,
-            mindState: currentAgent.mindState
-          },
-          otherAgent.name,
-          messages,
-          config.context
-        );
-
-        // Update Agent Mind
-        setAgent(prev => ({
-          ...prev,
-          mindState: result.mindState
-        }));
-
-        // Add Message
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          sender: currentAgent.name,
-          text: result.message,
-          timestamp: Date.now()
-        };
-
-        setMessages(prev => [...prev, newMessage]);
-      }
-
-      setTurn(isAliceTurn ? 'BOB' : 'ALICE');
+      setCurrentBridge(bridge);
+      setBridgeHistory(prev => [...prev, bridge]);
 
     } catch (error) {
-      console.error("Simulation error", error);
-      alert("Error calling Gemini API. Check console.");
+      console.error("Processing error:", error);
+      alert("Error processing journal entry. Check console for details.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleReset = () => {
-    setMessages([]);
-    setTurn('ALICE');
-    setPsychologicalEvents({ projections: [], beliefs: [], shadows: [] });
-    setAlice(createInitialCharacter(selectedPreset.alice));
-    setBob(createInitialCharacter(selectedPreset.bob));
+    setCurrentBridge(null);
   };
 
-  const handlePresetChange = (preset: ScenarioPreset) => {
-    setSelectedPreset(preset);
-    setConfig({
-      aliceGoal: preset.alice.secret_goal,
-      bobGoal: preset.bob.secret_goal,
-      context: preset.context
-    });
-    setAlice(createInitialCharacter(preset.alice));
-    setBob(createInitialCharacter(preset.bob));
-    setMessages([]);
-    setTurn('ALICE');
-    setPsychologicalEvents({ projections: [], beliefs: [], shadows: [] });
+  const handleClearHistory = () => {
+    setBridgeHistory([]);
+    setCurrentBridge(null);
   };
 
-  const handleSaveSettings = () => {
-    // Update characters with new goals
-    setAlice(prev => ({
-      ...prev,
-      secretGoal: config.aliceGoal,
-      conscious: {
-        ...prev.conscious,
-        conscious_goals: [config.aliceGoal]
-      }
-    }));
-    setBob(prev => ({
-      ...prev,
-      secretGoal: config.bobGoal,
-      conscious: {
-        ...prev.conscious,
-        conscious_goals: [config.bobGoal]
-      }
-    }));
-    handleReset();
-    setShowSettings(false);
+  const handleAddMarket = (question: string) => {
+    const market = createSampleMarket(question, 0.5, 'POLYMARKET');
+    setActiveMarkets(prev => [...prev, market]);
+  };
+
+  const handleRemoveMarket = (id: string) => {
+    setActiveMarkets(prev => prev.filter(m => m.id !== id));
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -345,80 +138,96 @@ const App: React.FC = () => {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col font-sans text-gray-900 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col font-sans text-gray-900">
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* HEADER */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center shadow-sm z-10">
         <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white p-2 rounded-xl shadow-lg">
-            <BrainIcon />
+          <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white p-2.5 rounded-xl shadow-lg">
+            <Link2 className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold leading-none bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Recursive Mind Narrative Engine
+            <h1 className="text-xl font-bold leading-none bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Signal-Alpha-Content Bridge
             </h1>
             <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
-              Theory of Mind × Archetypal Psychology × Story
-              <span className="bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                {selectedPreset.genre}
+              Journal → Content + Predictions
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                config.mode === 'BRIDGE_MODE' ? 'bg-purple-100 text-purple-600' :
+                config.mode === 'JOURNAL_TO_CONTENT' ? 'bg-pink-100 text-pink-600' :
+                config.mode === 'JOURNAL_TO_PREDICTION' ? 'bg-green-100 text-green-600' :
+                'bg-blue-100 text-blue-600'
+              }`}>
+                {config.mode.replace(/_/g, ' ')}
               </span>
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
-          {/* Mode toggle */}
+          {/* View mode toggle */}
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
             <button
-              onClick={() => setMode('simple')}
+              onClick={() => setViewMode('split')}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                mode === 'simple' 
+                viewMode === 'split' 
                   ? 'bg-white shadow text-gray-800' 
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <Brain className="w-3.5 h-3.5" />
-              Simple
+              <Layers className="w-3.5 h-3.5" />
+              Split
             </button>
             <button
-              onClick={() => setMode('deep')}
+              onClick={() => setViewMode('content')}
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                mode === 'deep' 
-                  ? 'bg-white shadow text-indigo-600' 
+                viewMode === 'content' 
+                  ? 'bg-white shadow text-pink-600' 
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
-              Deep Psyche
+              <Sparkles className="w-3.5 h-3.5" />
+              Content
+            </button>
+            <button
+              onClick={() => setViewMode('prediction')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'prediction' 
+                  ? 'bg-white shadow text-green-600' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              Predict
+            </button>
+            <button
+              onClick={() => setViewMode('bridge')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'bridge' 
+                  ? 'bg-white shadow text-purple-600' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              Bridge
             </button>
           </div>
 
-          {/* View toggles */}
-          {mode === 'deep' && (
-            <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
-              <button
-                onClick={() => setShowSubtext(!showSubtext)}
-                className={`p-1.5 rounded transition-colors ${showSubtext ? 'text-purple-600 bg-purple-50' : 'text-gray-400'}`}
-                title="Toggle Subtext"
-              >
-                {showSubtext ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={() => setShowPsychology(!showPsychology)}
-                className={`p-1.5 rounded transition-colors ${showPsychology ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400'}`}
-                title="Toggle Psychology"
-              >
-                <Sparkles className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+          {/* Markets button */}
+          <button 
+            onClick={() => setShowMarketManager(!showMarketManager)}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Markets ({activeMarkets.length})
+          </button>
 
           {/* Action buttons */}
           <button 
             onClick={() => setShowSettings(!showSettings)}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Scenario Settings"
+            title="Settings"
           >
             <Settings className="w-5 h-5" />
           </button>
@@ -429,137 +238,200 @@ const App: React.FC = () => {
           >
             <RotateCcw className="w-4 h-4" /> Reset
           </button>
-          
-          <button 
-            onClick={handleNextTurn}
-            disabled={isProcessing}
-            className={`flex items-center gap-2 px-6 py-2 text-sm font-bold text-white rounded-lg transition-all shadow-md transform active:scale-95 ${
-              isProcessing 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg'
-            }`}
-          >
-            {isProcessing ? (
-              <>
-                <span className="animate-pulse">Processing psyche...</span>
-              </>
-            ) : (
-              <>
-                Next Turn <Play className="w-4 h-4 fill-current" />
-              </>
-            )}
-          </button>
         </div>
       </header>
 
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* SETTINGS MODAL */}
+      {/* SETTINGS PANEL */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {showSettings && (
-        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-auto">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-600" />
-              Story Scenario
-            </h2>
-            
-            {/* Preset selector */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Choose a Scenario Archetype
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {SCENARIO_PRESETS.map((preset) => (
-                  <button
-                    key={preset.name}
-                    onClick={() => handlePresetChange(preset)}
-                    className={`text-left p-3 rounded-xl border-2 transition-all ${
-                      selectedPreset.name === preset.name
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="font-bold text-sm text-gray-800">{preset.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">{preset.description}</div>
-                    <div className="flex gap-1 mt-2">
-                      <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">
-                        {preset.alice.archetype}
-                      </span>
-                      <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">
-                        {preset.bob.archetype}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Settings className="w-5 h-5 text-indigo-600" />
+                System Configuration
+              </h2>
+              <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Theme display */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl mb-6">
-              <div className="text-sm font-semibold text-indigo-600 mb-1">Thematic Question</div>
-              <div className="text-gray-800 italic">"{selectedPreset.theme}"</div>
-            </div>
-
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Mode Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Shared Context</label>
-                <textarea 
-                  className="w-full p-3 border rounded-xl text-sm"
-                  rows={2}
-                  value={config.context}
-                  onChange={(e) => setConfig({...config, context: e.target.value})}
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Processing Mode</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { mode: 'BRIDGE_MODE', label: 'Bridge Mode', desc: 'Content + Predictions', icon: Link2, color: 'purple' },
+                    { mode: 'JOURNAL_TO_CONTENT', label: 'Content Only', desc: 'YouTube Shorts focus', icon: Sparkles, color: 'pink' },
+                    { mode: 'JOURNAL_TO_PREDICTION', label: 'Prediction Only', desc: 'Market alpha focus', icon: TrendingUp, color: 'green' },
+                    { mode: 'NARRATIVE_MODE', label: 'Narrative Mode', desc: 'Deep story analysis', icon: BookOpen, color: 'blue' },
+                  ].map(({ mode, label, desc, icon: Icon, color }) => (
+                    <button
+                      key={mode}
+                      onClick={() => setConfig({ ...config, mode: mode as SystemConfig['mode'] })}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        config.mode === mode
+                          ? `border-${color}-500 bg-${color}-50`
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 mb-2 ${config.mode === mode ? `text-${color}-600` : 'text-gray-400'}`} />
+                      <div className="font-medium text-gray-800">{label}</div>
+                      <div className="text-xs text-gray-500">{desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              
+
+              {/* Content Style */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Content Style</label>
+                <select
+                  value={config.content_style}
+                  onChange={(e) => setConfig({ ...config, content_style: e.target.value as any })}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="STORYTELLER">Storyteller - Narrative journeys</option>
+                  <option value="TEACHER">Teacher - Educational content</option>
+                  <option value="ENTERTAINER">Entertainer - Maximum engagement</option>
+                  <option value="PROVOCATEUR">Provocateur - Challenge assumptions</option>
+                  <option value="CONFESSIONALIST">Confessionalist - Raw vulnerability</option>
+                  <option value="ANALYST">Analyst - Data-driven breakdown</option>
+                </select>
+              </div>
+
+              {/* Market Style */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Market Analysis Style</label>
+                <select
+                  value={config.market_style}
+                  onChange={(e) => setConfig({ ...config, market_style: e.target.value as any })}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="ORACLE">Oracle - Pattern recognition</option>
+                  <option value="CONTRARIAN">Contrarian - Against the crowd</option>
+                  <option value="NARRATIVE">Narrative - Story-driven trading</option>
+                  <option value="VALUE">Value - Find mispricings</option>
+                  <option value="SAGE">Sage - Long-term macro</option>
+                </select>
+              </div>
+
+              {/* Depth Sliders */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: selectedPreset.alice.color }}>
-                    {selectedPreset.alice.name}'s Secret Goal
-                    <span className="text-gray-400 font-normal ml-2">({selectedPreset.alice.archetype})</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Psychological Depth: {Math.round(config.psychological_depth * 100)}%
                   </label>
-                  <textarea 
-                    className="w-full p-3 border rounded-xl text-sm"
-                    style={{ borderColor: `${selectedPreset.alice.color}40`, backgroundColor: `${selectedPreset.alice.color}08` }}
-                    rows={3}
-                    value={config.aliceGoal}
-                    onChange={(e) => setConfig({...config, aliceGoal: e.target.value})}
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={config.psychological_depth * 100}
+                    onChange={(e) => setConfig({ ...config, psychological_depth: Number(e.target.value) / 100 })}
+                    className="w-full"
                   />
-                  <div className="text-xs text-gray-500 mt-1">
-                    <strong>Core Wound:</strong> {selectedPreset.alice.core_wound}
-                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: selectedPreset.bob.color }}>
-                    {selectedPreset.bob.name}'s Secret Goal
-                    <span className="text-gray-400 font-normal ml-2">({selectedPreset.bob.archetype})</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Adversarial Intensity: {Math.round(config.adversarial_intensity * 100)}%
                   </label>
-                  <textarea 
-                    className="w-full p-3 border rounded-xl text-sm"
-                    style={{ borderColor: `${selectedPreset.bob.color}40`, backgroundColor: `${selectedPreset.bob.color}08` }}
-                    rows={3}
-                    value={config.bobGoal}
-                    onChange={(e) => setConfig({...config, bobGoal: e.target.value})}
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={config.adversarial_intensity * 100}
+                    onChange={(e) => setConfig({ ...config, adversarial_intensity: Number(e.target.value) / 100 })}
+                    className="w-full"
                   />
-                  <div className="text-xs text-gray-500 mt-1">
-                    <strong>Core Wound:</strong> {selectedPreset.bob.core_wound}
-                  </div>
                 </div>
               </div>
             </div>
-            
-            <div className="mt-6 flex justify-end gap-3">
+
+            <div className="mt-6 flex justify-end">
               <button 
-                onClick={() => setShowSettings(false)} 
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setShowSettings(false)}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all"
               >
-                Cancel
+                Save Settings
               </button>
-              <button 
-                onClick={handleSaveSettings} 
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700"
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* MARKET MANAGER PANEL */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {showMarketManager && (
+        <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 animate-in fade-in zoom-in duration-200 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-green-600" />
+                Active Markets
+              </h2>
+              <button onClick={() => setShowMarketManager(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              {activeMarkets.map((market) => (
+                <div key={market.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-gray-500">{market.platform}</span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-xs text-gray-500">{market.category}</span>
+                      </div>
+                      <h4 className="font-medium text-gray-800">{market.question}</h4>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <span>Current: <strong className="text-gray-800">{Math.round(market.current_price * 100)}%</strong></span>
+                        <span>Volume: ${market.volume.toLocaleString()}</span>
+                        <span>Resolves: {new Date(market.resolution_date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveMarket(market.id)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t pt-4">
+              <div className="text-sm font-medium text-gray-700 mb-2">Add Custom Market</div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const input = (e.target as HTMLFormElement).elements.namedItem('question') as HTMLInputElement;
+                  if (input.value.trim()) {
+                    handleAddMarket(input.value);
+                    input.value = '';
+                  }
+                }}
+                className="flex gap-2"
               >
-                Save & Restart
-              </button>
+                <input
+                  name="question"
+                  type="text"
+                  placeholder="Enter prediction market question..."
+                  className="flex-1 p-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -568,104 +440,108 @@ const App: React.FC = () => {
       {/* ═════════════════════════════════════════════════════════════════════ */}
       {/* MAIN CONTENT */}
       {/* ═════════════════════════════════════════════════════════════════════ */}
-      <main className="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
-        
-        {/* Character A's Mind */}
-        <div className="md:col-span-4 h-[50vh] md:h-full overflow-hidden bg-slate-50 border-r border-gray-200">
-          {mode === 'deep' ? (
-            <PsycheVisualizer 
-              character={alice} 
-              otherName={bob.name} 
-              isThinking={turn === 'ALICE' && isProcessing}
-              showDeep={showPsychology}
-            />
-          ) : (
-            <MindVisualizer 
-              agent={{
-                name: alice.name,
-                color: alice.color,
-                avatar: alice.avatar,
-                secretGoal: alice.secretGoal,
-                mindState: alice.mindState
-              }} 
-              otherName={bob.name} 
-              isThinking={turn === 'ALICE' && isProcessing} 
-            />
-          )}
-        </div>
-
-        {/* Narrative / Chat Interface (Center) */}
-        <div className="md:col-span-4 h-[40vh] md:h-full overflow-hidden z-0">
-          {mode === 'deep' ? (
-            <NarrativeView
-              messages={messages}
-              characters={[alice, bob]}
-              currentSpeaker={turn === 'ALICE' ? alice.name : bob.name}
+      <main className="flex-1 p-6 overflow-auto">
+        <div className={`max-w-7xl mx-auto grid gap-6 ${
+          viewMode === 'split' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
+        }`}>
+          
+          {/* LEFT COLUMN: Input + Bridge */}
+          <div className={`space-y-6 ${viewMode === 'content' || viewMode === 'prediction' ? 'hidden' : ''}`}>
+            {/* Journal Input */}
+            <JournalInput
+              onSubmit={handleJournalSubmit}
               isProcessing={isProcessing}
-              showSubtext={showSubtext}
-              showPsychology={showPsychology}
-              psychologicalEvents={psychologicalEvents}
+              config={config}
+              onConfigChange={setConfig}
             />
-          ) : (
-            <ChatInterface 
-              messages={messages} 
-              currentTurn={turn} 
-              isProcessing={isProcessing} 
-            />
-          )}
+
+            {/* Bridge Visualizer */}
+            {(viewMode === 'split' || viewMode === 'bridge') && (
+              <BridgeVisualizer
+                bridge={currentBridge}
+                isLoading={isProcessing}
+              />
+            )}
+          </div>
+
+          {/* RIGHT COLUMN: Outputs */}
+          <div className={`space-y-6 ${viewMode === 'bridge' ? 'hidden' : ''}`}>
+            {/* Content Preview */}
+            {(viewMode === 'split' || viewMode === 'content') && (
+              <ContentPreview
+                brief={currentBridge?.content_briefs[0] || null}
+                isLoading={isProcessing && (config.mode === 'JOURNAL_TO_CONTENT' || config.mode === 'BRIDGE_MODE')}
+              />
+            )}
+
+            {/* Prediction Panel */}
+            {(viewMode === 'split' || viewMode === 'prediction') && (
+              <PredictionPanel
+                positions={currentBridge?.market_positions || []}
+                markets={new Map(activeMarkets.map(m => [m.id, m]))}
+                isLoading={isProcessing && (config.mode === 'JOURNAL_TO_PREDICTION' || config.mode === 'BRIDGE_MODE')}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Character B's Mind */}
-        <div className="md:col-span-4 h-[50vh] md:h-full overflow-hidden bg-slate-50 border-l border-gray-200">
-          {mode === 'deep' ? (
-            <PsycheVisualizer 
-              character={bob} 
-              otherName={alice.name} 
-              isThinking={turn === 'BOB' && isProcessing}
-              showDeep={showPsychology}
-            />
-          ) : (
-            <MindVisualizer 
-              agent={{
-                name: bob.name,
-                color: bob.color,
-                avatar: bob.avatar,
-                secretGoal: bob.secretGoal,
-                mindState: bob.mindState
-              }} 
-              otherName={alice.name} 
-              isThinking={turn === 'BOB' && isProcessing} 
-            />
-          )}
-        </div>
-
-      </main>
-      
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      {/* MOBILE FOOTER */}
-      {/* ═════════════════════════════════════════════════════════════════════ */}
-      <div className="md:hidden bg-white border-t p-2 text-center text-xs font-bold text-gray-500">
-        Current Turn: <span className="text-indigo-600">{turn === 'ALICE' ? alice.name : bob.name}</span>
-        {mode === 'deep' && (
-          <span className="ml-2 text-purple-500">
-            ({(turn === 'ALICE' ? alice : bob).unconscious.dominant_archetype})
-          </span>
+        {/* History Bar */}
+        {bridgeHistory.length > 0 && (
+          <div className="max-w-7xl mx-auto mt-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-700">Session History</span>
+                <button
+                  onClick={handleClearHistory}
+                  className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {bridgeHistory.map((bridge, i) => (
+                  <button
+                    key={bridge.id}
+                    onClick={() => setCurrentBridge(bridge)}
+                    className={`shrink-0 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                      currentBridge?.id === bridge.id
+                        ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-300'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Entry {i + 1}
+                    <span className="ml-2 text-gray-400">
+                      {bridge.content_briefs.length > 0 && '✨'}
+                      {bridge.market_positions.length > 0 && '📈'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
-      </div>
+      </main>
+
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      {/* FOOTER */}
+      {/* ═════════════════════════════════════════════════════════════════════ */}
+      <footer className="bg-white border-t border-gray-200 px-6 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center gap-4">
+            <span>🌉 Signal-Alpha-Content Bridge</span>
+            <span className="text-gray-300">|</span>
+            <span>Journal → Insights → Content + Alpha</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span>⚠️ Not financial advice</span>
+            <span className="text-gray-300">|</span>
+            <span>Powered by Gemini</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ICONS
-// ─────────────────────────────────────────────────────────────────────────────
-
-const BrainIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
-    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
-  </svg>
-);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MOUNT

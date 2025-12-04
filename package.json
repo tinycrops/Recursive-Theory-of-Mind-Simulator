@@ -1,13 +1,23 @@
 {
-  "name": "recursive-theory-of-mind-simulator",
+  "name": "signal-alpha-content-bridge",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Bridge system connecting video journal inputs to YouTube Short content generation and prediction market alpha",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
+  "keywords": [
+    "ai",
+    "content-generation",
+    "prediction-markets",
+    "youtube-shorts",
+    "video-journals",
+    "adversarial-ai",
+    "gemini"
+  ],
   "dependencies": {
     "@google/genai": "^1.30.0",
     "react": "^19.2.0",
